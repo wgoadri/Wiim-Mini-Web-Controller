@@ -1,7 +1,19 @@
-const BASE = '/api/wiim/httpapi.asp'
+// In dev, requests go through the Vite proxy at /api/wiim.
+// In any other context (or when the user sets a custom host),
+// requests go directly to the device.
+let customHost: string | null = null
+
+export function setHost(host: string | null) {
+  customHost = host
+}
+
+function baseUrl(): string {
+  if (customHost) return `${customHost}/httpapi.asp`
+  return '/api/wiim/httpapi.asp'
+}
 
 async function command(cmd: string): Promise<string> {
-  const response = await fetch(`${BASE}?command=${cmd}`)
+  const response = await fetch(`${baseUrl()}?command=${cmd}`)
   if (!response.ok) throw new Error(`Wiim error ${response.status}`)
   return response.text()
 }

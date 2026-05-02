@@ -13,22 +13,26 @@ import {
 } from './api/wiim'
 import PresetButtons from './components/PresetButtons'
 import SourceSwitcher from './components/SourceSwitcher'
+import DeviceSettings from './components/DeviceSettings'
+import { useDeviceHost } from './hooks/useDeviceHost'
 
 export default function App() {
+  const [host, setHost] = useDeviceHost()
   const [device, setDevice] = useState<DeviceInfo | null>(null)
   const [player, setPlayer] = useState<PlayerStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+useEffect(() => {
+    setError(null)
     getDeviceInfo().then(setDevice).catch((e) => setError(String(e)))
-  }, [])
+  }, [host])
 
   useEffect(() => {
     const tick = () => getPlayerStatus().then(setPlayer).catch(() => {})
     tick()
     const id = setInterval(tick, 2000)
     return () => clearInterval(id)
-  }, [])
+  }, [host])
 
   if (error) return <pre>Error: {error}</pre>
   if (!device || !player) return <p>Loading…</p>
@@ -52,6 +56,8 @@ export default function App() {
 
       <PresetButtons />
       
+      <DeviceSettings host={host} onHostChange={setHost} />
+
       <label>
         Volume: {volume}
         <input
