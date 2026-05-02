@@ -1,20 +1,22 @@
 import { switchSource, type Source } from '../api/wiim'
 
 const SOURCES: { value: Source; label: string }[] = [
-  { value: 'wifi', label: 'WiFi' },
+  { value: 'wifi', label: 'Network' },
   { value: 'line-in', label: 'Line-In' },
   { value: 'bluetooth', label: 'Bluetooth' },
 ]
 
-interface Props {
-  currentMode: string
-}
-
-// Maps a Source value to the mode codes that indicate it's active.
+// Mode codes that indicate each source is active.
+// "Network" covers idle, generic streaming, and Spotify Connect —
+// anything that isn't a hardware input.
 const MODE_FOR_SOURCE: Record<Source, string[]> = {
-  'wifi': ['10', '99'],
+  'wifi': ['0', '10', '31'],
   'line-in': ['40'],
   'bluetooth': ['41'],
+}
+
+interface Props {
+  currentMode: string
 }
 
 export default function SourceSwitcher({ currentMode }: Props) {

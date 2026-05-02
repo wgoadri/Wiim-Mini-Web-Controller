@@ -66,15 +66,16 @@ export type Source = 'wifi' | 'line-in' | 'bluetooth'
 export const switchSource = (source: Source) =>
   command(`setPlayerCmd:switchmode:${source}`)
 
-// The `mode` field in PlayerStatus is a numeric code.
-// Mapping observed from LinkPlay devices:
-//   10 = wifi/network, 40 = line-in, 41 = bluetooth, 99 = idle
+// Mode codes observed on a WiiM Mini (Linkplay firmware).
+// 0 = idle, 10 = network streaming (Qobuz, Tidal, etc.),
+// 31 = Spotify Connect, 40 = line-in, 41 = bluetooth.
 export function readableMode(mode: string): string {
   switch (mode) {
-    case '10': return 'WiFi'
+    case '0':  return 'Idle'
+    case '10': return 'Streaming'
+    case '31': return 'Spotify'
     case '40': return 'Line-In'
     case '41': return 'Bluetooth'
-    case '99': return 'Idle'
-    default: return `Mode ${mode}`
+    default:   return `Mode ${mode}`
   }
 }
