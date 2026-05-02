@@ -55,3 +55,7 @@ export const decodeTrack = (s: PlayerStatus) => ({
   artist: hexDecode(s.Artist),
   album: hexDecode(s.Album),
 })
+
+// Triggers a preset (1-12) configured in the WiiM Home app.
+// Note: no setPlayerCmd: prefix — this is undocumented but works.
+export const playPreset = (slot: number) => command(`MCUKeyShortClick:${slot}`)

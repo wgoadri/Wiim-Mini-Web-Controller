@@ -10,6 +10,7 @@ import {
   type DeviceInfo,
   type PlayerStatus,
 } from './api/wiim'
+import PresetButtons from './components/PresetButtons'
 
 export default function App() {
   const [device, setDevice] = useState<DeviceInfo | null>(null)
@@ -45,6 +46,8 @@ export default function App() {
         <button onClick={() => next()}>⏭</button>
       </div>
 
+      <PresetButtons />
+      
       <label>
         Volume: {volume}
         <input

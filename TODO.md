@@ -1,0 +1,2 @@
+- Hardcoded preset list, not fetched. The HTTP API has no command to read preset names — they live inside the WiiM Home app. Hardcoding the labels is the simplest thing that works. We can move them to a config file later if you add more.
+- Inline styles. Keeping them inline until we hit the second component that wants the same style. Then we extract.
