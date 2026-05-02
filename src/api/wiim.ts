@@ -33,6 +33,7 @@ export interface DeviceInfo {
 
 export interface PlayerStatus {
   status: 'stop' | 'play' | 'pause' | 'loading'
+  mode: string
   vol: string
   mute: string
   Title: string
@@ -59,3 +60,21 @@ export const decodeTrack = (s: PlayerStatus) => ({
 // Triggers a preset (1-12) configured in the WiiM Home app.
 // Note: no setPlayerCmd: prefix — this is undocumented but works.
 export const playPreset = (slot: number) => command(`MCUKeyShortClick:${slot}`)
+
+export type Source = 'wifi' | 'line-in' | 'bluetooth'
+
+export const switchSource = (source: Source) =>
+  command(`setPlayerCmd:switchmode:${source}`)
+
+// The `mode` field in PlayerStatus is a numeric code.
+// Mapping observed from LinkPlay devices:
+//   10 = wifi/network, 40 = line-in, 41 = bluetooth, 99 = idle
+export function readableMode(mode: string): string {
+  switch (mode) {
+    case '10': return 'WiFi'
+    case '40': return 'Line-In'
+    case '41': return 'Bluetooth'
+    case '99': return 'Idle'
+    default: return `Mode ${mode}`
+  }
+}

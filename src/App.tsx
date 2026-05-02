@@ -9,8 +9,10 @@ import {
   decodeTrack,
   type DeviceInfo,
   type PlayerStatus,
+  readableMode
 } from './api/wiim'
 import PresetButtons from './components/PresetButtons'
+import SourceSwitcher from './components/SourceSwitcher'
 
 export default function App() {
   const [device, setDevice] = useState<DeviceInfo | null>(null)
@@ -37,7 +39,7 @@ export default function App() {
   return (
     <main style={{ fontFamily: 'system-ui', padding: 24, maxWidth: 480 }}>
       <h1>{device.DeviceName}</h1>
-      <p>Status: {player.status}</p>
+      <p>Status: {player.status} · {readableMode(player.mode)}</p>
       <p>{track.artist || '—'} — {track.title || '—'}</p>
 
       <div style={{ display: 'flex', gap: 8, margin: '16px 0' }}>
@@ -45,6 +47,8 @@ export default function App() {
         <button onClick={() => togglePause()}>⏯</button>
         <button onClick={() => next()}>⏭</button>
       </div>
+
+      <SourceSwitcher currentMode={player.mode} />
 
       <PresetButtons />
       
