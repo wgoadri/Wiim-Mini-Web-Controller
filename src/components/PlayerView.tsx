@@ -10,6 +10,51 @@ import { useAlbumArt } from '../hooks/useAlbumArt'
 import SourceSwitcher from './SourceSwitcher'
 import PresetButtons from './PresetButtons'
 
+function decodeText(value: string): string {
+  if (!value) return ''
+
+  const textarea = document.createElement('textarea')
+  textarea.innerHTML = value
+
+  return textarea.value
+}
+
+function isUnknown(value: string): boolean {
+  if (!value) return true
+
+  const normalized = value.trim().toLowerCase()
+
+  return (
+    normalized === 'unknown' ||
+    normalized === 'unknown artist' ||
+    normalized === 'unknown album' ||
+    normalized === 'n/a'
+  )
+}
+
+function shouldLoadAlbumArt(
+  artist: string,
+  album: string,
+  mode: string,
+): boolean {
+  const normalizedMode = mode.toLowerCase()
+
+  // No metadata sources
+  if (
+    normalizedMode.includes('line-in') ||
+    normalizedMode.includes('aux')
+  ) {
+    return false
+  }
+
+  // Invalid metadata
+  if (isUnknown(artist) || isUnknown(album)) {
+    return false
+  }
+
+  return Boolean(artist && album)
+}
+
 function PlayIcon({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
@@ -54,8 +99,28 @@ interface NowPlayingProps {
   isPlaying: boolean
 }
 
-function NowPlaying({ artist, title, album, status, mode, isPlaying }: NowPlayingProps) {
-  const artUrl = useAlbumArt(artist, album)
+function NowPlaying({
+  artist,
+  title,
+  album,
+  status,
+  mode,
+  isPlaying,
+}: NowPlayingProps) {
+  const decodedArtist = decodeText(artist)
+  const decodedAlbum = decodeText(album)
+  const decodedTitle = decodeText(title)
+
+  const canLoadArt = shouldLoadAlbumArt(
+    decodedArtist,
+    decodedAlbum,
+    mode,
+  )
+
+  const artUrl = useAlbumArt(
+    canLoadArt ? decodedArtist : '',
+    canLoadArt ? decodedAlbum : '',
+  )
 
   return (
     <section className="mb-6 overflow-hidden rounded-2xl bg-surface shadow-sm">
@@ -63,11 +128,10 @@ function NowPlaying({ artist, title, album, status, mode, isPlaying }: NowPlayin
         {artUrl ? (
           <img
             src={artUrl}
-            alt={album ? `${album} cover` : 'Album art'}
+            alt={decodedAlbum ? `${decodedAlbum} cover` : 'Album art'}
             className="h-full w-full object-cover"
-            // Fallback to placeholder if the URL ever 404s
             onError={(e) => {
-              (e.currentTarget as HTMLImageElement).style.display = 'none'
+              ;(e.currentTarget as HTMLImageElement).style.display = 'none'
             }}
           />
         ) : (
@@ -88,15 +152,18 @@ function NowPlaying({ artist, title, album, status, mode, isPlaying }: NowPlayin
           />
           {status} · {readableMode(mode)}
         </div>
+
         <div className="text-lg font-semibold leading-tight">
-          {title || '—'}
+          {decodedTitle || '—'}
         </div>
+
         <div className="text-sm text-muted">
-          {artist || '—'}
-          {album && (
+          {decodedArtist || '—'}
+
+          {decodedAlbum && !isUnknown(decodedAlbum) && (
             <>
               <span className="mx-1.5 text-muted/40">·</span>
-              <span className="italic">{album}</span>
+              <span className="italic">{decodedAlbum}</span>
             </>
           )}
         </div>
@@ -111,8 +178,13 @@ interface Props {
   onVolumeChange: (next: number) => void
 }
 
-export default function PlayerView({ player, localVolume, onVolumeChange }: Props) {
+export default function PlayerView({
+  player,
+  localVolume,
+  onVolumeChange,
+}: Props) {
   const track = decodeTrack(player)
+
   const volume = Number(player.vol)
   const displayVolume = localVolume ?? volume
   const isPlaying = player.status === 'play'
@@ -136,6 +208,7 @@ export default function PlayerView({ player, localVolume, onVolumeChange }: Prop
         >
           <PreviousIcon />
         </button>
+
         <button
           onClick={() => togglePause()}
           className="flex h-16 w-16 items-center justify-center rounded-full bg-accent text-white shadow-md transition active:scale-90 hover:bg-accent-deep"
@@ -143,6 +216,7 @@ export default function PlayerView({ player, localVolume, onVolumeChange }: Prop
         >
           {isPlaying ? <PauseIcon /> : <PlayIcon />}
         </button>
+
         <button
           onClick={() => next()}
           className="flex h-12 w-12 items-center justify-center rounded-full bg-surface text-ink shadow-sm transition active:scale-90 hover:bg-active"
@@ -161,10 +235,12 @@ export default function PlayerView({ player, localVolume, onVolumeChange }: Prop
           <span className="text-xs font-medium uppercase tracking-wider text-muted">
             Volume
           </span>
+
           <span className="font-mono text-sm font-semibold">
             {displayVolume}
           </span>
         </div>
+
         <input
           type="range"
           min={0}
