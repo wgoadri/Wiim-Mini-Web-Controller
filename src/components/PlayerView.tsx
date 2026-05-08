@@ -6,6 +6,7 @@ import {
   readableMode,
   type PlayerStatus,
 } from '../api/wiim'
+import { useAlbumArt } from '../hooks/useAlbumArt'
 import SourceSwitcher from './SourceSwitcher'
 import PresetButtons from './PresetButtons'
 
@@ -44,6 +45,66 @@ function NextIcon({ size = 22 }: { size?: number }) {
   )
 }
 
+interface NowPlayingProps {
+  artist: string
+  title: string
+  album: string
+  status: string
+  mode: string
+  isPlaying: boolean
+}
+
+function NowPlaying({ artist, title, album, status, mode, isPlaying }: NowPlayingProps) {
+  const artUrl = useAlbumArt(artist, album)
+
+  return (
+    <section className="mb-6 overflow-hidden rounded-2xl bg-surface shadow-sm">
+      <div className="relative aspect-square w-full bg-gradient-to-br from-accent/30 to-accent-deep/20">
+        {artUrl ? (
+          <img
+            src={artUrl}
+            alt={album ? `${album} cover` : 'Album art'}
+            className="h-full w-full object-cover"
+            // Fallback to placeholder if the URL ever 404s
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = 'none'
+            }}
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-accent-deep/40">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 3v9.27a4 4 0 1 0 2 3.46V7h4V3z" />
+            </svg>
+          </div>
+        )}
+      </div>
+
+      <div className="p-5">
+        <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted">
+          <span
+            className={`inline-block h-2 w-2 rounded-full ${
+              isPlaying ? 'bg-accent animate-pulse' : 'bg-muted'
+            }`}
+          />
+          {status} · {readableMode(mode)}
+        </div>
+        <div className="text-lg font-semibold leading-tight">
+          {title || '—'}
+        </div>
+        <div className="text-sm text-muted">
+          {artist || '—'}
+          {album && (
+            <>
+              <span className="mx-1.5 text-muted/40">·</span>
+              <span className="italic">{album}</span>
+            </>
+          )}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 interface Props {
   player: PlayerStatus
   localVolume: number | null
@@ -58,22 +119,14 @@ export default function PlayerView({ player, localVolume, onVolumeChange }: Prop
 
   return (
     <>
-      <section className="mb-6 rounded-2xl bg-surface p-5 shadow-sm">
-        <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted">
-          <span
-            className={`inline-block h-2 w-2 rounded-full ${
-              isPlaying ? 'bg-accent animate-pulse' : 'bg-muted'
-            }`}
-          />
-          {player.status} · {readableMode(player.mode)}
-        </div>
-        <div className="text-lg font-semibold leading-tight">
-          {track.title || '—'}
-        </div>
-        <div className="text-sm text-muted">
-          {track.artist || '—'}
-        </div>
-      </section>
+      <NowPlaying
+        artist={track.artist}
+        title={track.title}
+        album={track.album}
+        status={player.status}
+        mode={player.mode}
+        isPlaying={isPlaying}
+      />
 
       <div className="mb-6 flex items-center justify-center gap-4">
         <button
