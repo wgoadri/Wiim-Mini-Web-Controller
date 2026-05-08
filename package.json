@@ -10,9 +10,13 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm run lint && npm run build",
-    "smoke": "bash scripts/smoke.sh"
+    "smoke": "bash scripts/smoke.sh",
+    "start": "node server/index.js",
+    "serve": "npm run build && npm start"
   },
   "dependencies": {
+    "express": "^5.2.1",
+    "http-proxy-middleware": "^4.0.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
   },

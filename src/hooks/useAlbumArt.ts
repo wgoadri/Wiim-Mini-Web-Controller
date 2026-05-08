@@ -1,28 +1,27 @@
 import { useEffect, useState } from 'react'
 import { getAlbumArt } from '../api/albumArt'
 
-export function useAlbumArt(
-  artist: string,
-  album: string,
-): string | null {
-  const shouldFetch = Boolean(artist && album)
-  const [url, setUrl] = useState<string | null>(null)
+interface State {
+  artist: string
+  album: string
+  url: string | null
+}
+
+export function useAlbumArt(artist: string, album: string): string | null {
+  const [state, setState] = useState<State>({ artist: '', album: '', url: null })
 
   useEffect(() => {
-    if (!shouldFetch) return
+    if (!artist || !album) return
 
     let cancelled = false
-
     getAlbumArt(artist, album).then((result) => {
-      if (!cancelled) {
-        setUrl(result)
-      }
+      if (!cancelled) setState({ artist, album, url: result })
     })
 
     return () => {
       cancelled = true
     }
-  }, [artist, album, shouldFetch])
+  }, [artist, album])
 
-  return shouldFetch ? url : null
+  return state.artist === artist && state.album === album ? state.url : null
 }
