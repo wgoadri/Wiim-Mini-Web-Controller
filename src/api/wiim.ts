@@ -65,6 +65,23 @@ export const decodeTrack = (s: PlayerStatus) => ({
   album: hexDecode(s.Album),
 })
 
+// curpos and totlen are strings of milliseconds.
+// Returns "M:SS" or "H:MM:SS" for long tracks.
+export function formatTime(ms: string): string {
+  const totalSeconds = Math.floor(Number(ms) / 1000)
+  if (!Number.isFinite(totalSeconds) || totalSeconds < 0) return '0:00'
+
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+  const pad = (n: number) => n.toString().padStart(2, '0')
+
+  if (hours > 0) {
+    return `${hours}:${pad(minutes)}:${pad(seconds)}`
+  }
+  return `${minutes}:${pad(seconds)}`
+}
+
 export const playPreset = (slot: number) => command(`MCUKeyShortClick:${slot}`)
 
 export type Source = 'wifi' | 'line-in' | 'bluetooth'

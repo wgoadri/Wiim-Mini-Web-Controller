@@ -9,6 +9,7 @@ import {
 import { useAlbumArt } from '../hooks/useAlbumArt'
 import SourceSwitcher from './SourceSwitcher'
 import PresetButtons from './PresetButtons'
+import TrackProgress from './TrackProgress'
 
 function decodeText(value: string): string {
   if (!value) return ''
@@ -97,6 +98,8 @@ interface NowPlayingProps {
   status: string
   mode: string
   isPlaying: boolean
+  curpos: string
+  totlen: string
 }
 
 function NowPlaying({
@@ -106,6 +109,8 @@ function NowPlaying({
   status,
   mode,
   isPlaying,
+  curpos,
+  totlen
 }: NowPlayingProps) {
   const decodedArtist = decodeText(artist)
   const decodedAlbum = decodeText(album)
@@ -167,6 +172,8 @@ function NowPlaying({
             </>
           )}
         </div>
+
+        <TrackProgress curpos={curpos} totlen={totlen} />
       </div>
     </section>
   )
@@ -198,6 +205,8 @@ export default function PlayerView({
         status={player.status}
         mode={player.mode}
         isPlaying={isPlaying}
+        curpos={player.curpos}
+        totlen={player.totlen}
       />
 
       <div className="mb-6 flex items-center justify-center gap-4">
