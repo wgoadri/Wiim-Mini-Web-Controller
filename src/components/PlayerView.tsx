@@ -7,6 +7,7 @@ import {
   type PlayerStatus,
 } from '../api/wiim'
 import { useAlbumArt } from '../hooks/useAlbumArt'
+import { useArtistInfo } from '../hooks/useArtistInfo'
 import SourceSwitcher from './SourceSwitcher'
 import PresetButtons from './PresetButtons'
 import TrackProgress from './TrackProgress'
@@ -127,6 +128,8 @@ function NowPlaying({
     canLoadArt ? decodedAlbum : '',
   )
 
+  const artistInfo = useArtistInfo(canLoadArt ? decodedArtist : '')
+
   return (
     <section className="mb-6 overflow-hidden rounded-2xl bg-surface shadow-sm">
       <div className="relative aspect-square w-full bg-gradient-to-br from-accent/30 to-accent-deep/20">
@@ -174,6 +177,27 @@ function NowPlaying({
         </div>
 
         <TrackProgress curpos={curpos} totlen={totlen} />
+
+        {artistInfo && (
+          <details className="mt-4 border-t border-muted/15 pt-3">
+            <summary className="cursor-pointer text-xs font-medium uppercase tracking-wider text-muted transition hover:text-ink">
+              About {decodedArtist}
+            </summary>
+            <p className="mt-3 text-sm leading-relaxed text-ink/80">
+              {artistInfo.description}
+            </p>
+            {artistInfo.url && (
+              <a
+                href={artistInfo.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-block text-xs font-medium text-accent transition hover:text-accent-deep"
+              >
+                Read more on Wikipedia →
+              </a>
+            )}
+          </details>
+        )}
       </div>
     </section>
   )

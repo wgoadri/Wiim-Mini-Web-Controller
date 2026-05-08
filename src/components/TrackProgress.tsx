@@ -19,7 +19,7 @@ export default function TrackProgress({ curpos, totlen }: Props) {
           style={{ width: `${ratio * 100}%` }}
         />
       </div>
-      <div className="mt-1 flex justify-between font-mono text-[11px] text-muted">
+      <div className="mt-1.5 flex justify-between font-mono text-xs font-medium text-muted">
         <span>{formatTime(curpos)}</span>
         <span>{hasProgress ? formatTime(totlen) : '—:—'}</span>
       </div>
