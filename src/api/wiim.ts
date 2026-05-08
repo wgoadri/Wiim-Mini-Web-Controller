@@ -7,15 +7,25 @@ export function setHost(host: string | null) {
   customHost = host
 }
 
-function baseUrl(): string {
-  if (customHost) return `${customHost}/httpapi.asp`
-  return '/api/wiim/httpapi.asp'
-}
-
 async function command(cmd: string): Promise<string> {
-  const response = await fetch(`${baseUrl()}?command=${cmd}`)
-  if (!response.ok) throw new Error(`Wiim error ${response.status}`)
-  return response.text()
+  const headers: Record<string, string> = {}
+  if (customHost) {
+    headers['x-wiim-host'] = customHost
+  }
+
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 3000)
+
+  try {
+    const response = await fetch(
+      `/api/wiim/httpapi.asp?command=${cmd}`,
+      { headers, signal: controller.signal },
+    )
+    if (!response.ok) throw new Error(`Wiim error ${response.status}`)
+    return await response.text()
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 async function commandJson<T>(cmd: string): Promise<T> {
