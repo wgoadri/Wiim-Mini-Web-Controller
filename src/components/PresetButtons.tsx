@@ -8,9 +8,9 @@ interface Preset {
 // Edit this list to match what you configured in the WiiM Home app.
 // Slots not configured on the device will simply do nothing when pressed.
 const PRESETS: Preset[] = [
-  { slot: 1, label: 'Preset 1' },
-  { slot: 2, label: 'Preset 2' },
-  { slot: 3, label: 'Preset 3' },
+  { slot: 1, label: 'Spotify' },
+  { slot: 2, label: 'France Inter' },
+  { slot: 3, label: 'Angine de Poitrine Qobuz' },
   { slot: 4, label: 'Preset 4' },
   { slot: 5, label: 'Preset 5' },
   { slot: 6, label: 'Preset 6' },

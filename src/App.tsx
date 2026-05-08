@@ -1,18 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   getDeviceInfo,
   getPlayerStatus,
-  togglePause,
-  next,
-  previous,
   setVolume,
-  decodeTrack,
   type DeviceInfo,
   type PlayerStatus,
-  readableMode
 } from './api/wiim'
-import PresetButtons from './components/PresetButtons'
-import SourceSwitcher from './components/SourceSwitcher'
+import PlayerView from './components/PlayerView'
 import DeviceSettings from './components/DeviceSettings'
 import { useDeviceHost } from './hooks/useDeviceHost'
 
@@ -21,14 +15,29 @@ export default function App() {
   const [device, setDevice] = useState<DeviceInfo | null>(null)
   const [player, setPlayer] = useState<PlayerStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
-
-useEffect(() => {
-    setError(null)
-    getDeviceInfo().then(setDevice).catch((e) => setError(String(e)))
-  }, [host])
+  const [localVolume, setLocalVolume] = useState<number | null>(null)
+  const volumeTimer = useRef<number | null>(null)
+  const [pollFailures, setPollFailures] = useState(0)
 
   useEffect(() => {
-    const tick = () => getPlayerStatus().then(setPlayer).catch(() => {})
+      getDeviceInfo()
+        .then((info) => {
+          setDevice(info)
+          setError(null)
+        })
+        .catch((e) => setError(String(e)))
+  }, [host])
+    
+  useEffect(() => {
+    const tick = async () => {
+      try {
+        const status = await getPlayerStatus()
+        setPlayer(status)
+        setPollFailures(0)
+      } catch {
+        setPollFailures((n) => n + 1)
+      }
+    }
     tick()
     const id = setInterval(tick, 2000)
     return () => clearInterval(id)
@@ -37,38 +46,44 @@ useEffect(() => {
   if (error) return <pre>Error: {error}</pre>
   if (!device || !player) return <p>Loading…</p>
 
-  const track = decodeTrack(player)
-  const volume = Number(player.vol)
-
   return (
     <main style={{ fontFamily: 'system-ui', padding: 24, maxWidth: 480 }}>
-      <h1>{device.DeviceName}</h1>
-      <p>Status: {player.status} · {readableMode(player.mode)}</p>
-      <p>{track.artist || '—'} — {track.title || '—'}</p>
+      {device ? (
+        <h1>{device.DeviceName}</h1>
+      ) : (
+        <h1 style={{ color: '#888' }}>Wiim Controller</h1>
+      )}
 
-      <div style={{ display: 'flex', gap: 8, margin: '16px 0' }}>
-        <button onClick={() => previous()}>⏮</button>
-        <button onClick={() => togglePause()}>⏯</button>
-        <button onClick={() => next()}>⏭</button>
-      </div>
+      {pollFailures >= 3 && (
+        <p style={{ color: 'crimson', fontSize: 13, margin: '8px 0' }}>
+          Device unreachable. Last update may be stale.
+        </p>
+      )}
 
-      <SourceSwitcher currentMode={player.mode} />
+      {error && !device && (
+        <p style={{ color: 'crimson', fontSize: 13, margin: '8px 0' }}>
+          Could not reach the device. Check the host below.
+        </p>
+      )}
 
-      <PresetButtons />
-      
-      <DeviceSettings host={host} onHostChange={setHost} />
-
-      <label>
-        Volume: {volume}
-        <input
-          type="range"
-          min={0}
-          max={100}
-          value={volume}
-          onChange={(e) => setVolume(Number(e.target.value))}
-          style={{ width: '100%', display: 'block' }}
+      {device && player ? (
+        <PlayerView
+          player={player}
+          localVolume={localVolume}
+          onVolumeChange={(next) => {
+            setLocalVolume(next)
+            if (volumeTimer.current) clearTimeout(volumeTimer.current)
+            volumeTimer.current = window.setTimeout(() => {
+              setVolume(next)
+              setLocalVolume(null)
+            }, 150)
+          }}
         />
-      </label>
+      ) : (
+        <p style={{ color: '#888' }}>Waiting for device…</p>
+      )}
+
+      <DeviceSettings host={host} onHostChange={setHost} />
     </main>
   )
 }

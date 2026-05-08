@@ -16,9 +16,10 @@ A single-page React app that controls a WiiM Mini on the local network. Running 
 - **Device status display** — name, current source, playback status, current track (artist + title)
 - **Playback controls** — previous, play/pause toggle, next
 - **Volume slider** — 0–100, applied immediately
-- **Preset buttons** — 6 buttons triggering preset slots 1–6 via `MCUKeyShortClick`. Slot labels are hardcoded.
+- **Preset buttons** — 6 buttons triggering preset slots 1–6 via `MCUKeyShortClick`. Labels match the user's actual WiiM Home presets.
 - **Source switcher** — Network / Line-In / Bluetooth, with the active source highlighted based on the device's reported mode
 - **Status polling** — `getPlayerStatus` every 2 seconds, drives the UI live
+- **Configurable device host** — collapsible settings panel with test-and-save flow, persisted in `localStorage`. Empty input falls back to the Vite dev proxy.
 
 ### Verified behaviors
 
@@ -26,6 +27,7 @@ A single-page React app that controls a WiiM Mini on the local network. Running 
 - Spotify Connect playback is detected (mode `31` → "Spotify" label)
 - Hex-decoding of track metadata works for French titles with accents
 - Source switching works for all three inputs and the active-source highlight reflects reality
+- Bad host input is rejected and reverted; valid host persists across reloads
 
 ---
 
@@ -34,8 +36,8 @@ A single-page React app that controls a WiiM Mini on the local network. Running 
 ### Stack
 
 - **Vite + React + TypeScript** (Vite template, no extras)
-- **No backend** — Vite dev proxy forwards `/api/wiim/*` to the device
-- **No state library** — `useState` + `useEffect` only
+- **No backend** — Vite dev proxy forwards `/api/wiim/*` to the device when no custom host is set
+- **No state library** — `useState` + `useEffect` + one custom hook
 - **No CSS framework** — inline styles, scoped per component
 - **No tests** — there's no business logic worth testing yet
 
@@ -47,15 +49,18 @@ A single-page React app that controls a WiiM Mini on the local network. Running 
 │   ├── api/
 │   │   └── wiim.ts              # All device HTTP calls + types
 │   ├── components/
-│   │   ├── PresetButtons.tsx    # 6 preset buttons (hardcoded labels)
-│   │   └── SourceSwitcher.tsx   # Network/Line-In/Bluetooth toggle
+│   │   ├── PresetButtons.tsx    # 6 preset buttons
+│   │   ├── SourceSwitcher.tsx   # Network/Line-In/Bluetooth toggle
+│   │   └── DeviceSettings.tsx   # Host configuration with test-and-save
+│   ├── hooks/
+│   │   └── useDeviceHost.ts     # Host state + localStorage persistence
 │   └── App.tsx                  # Single page, polls status, composes UI
 ├── scripts/
 │   └── smoke.sh                 # Read-only device reachability check
 ├── .github/workflows/
 │   └── ci.yml                   # typecheck + lint + build on push
 ├── vite.config.ts               # Dev proxy with secure: false (self-signed cert)
-├── .env.local                   # VITE_WIIM_HOST=https://192.168.1.13 (gitignored)
+├── .env.local                   # VITE_WIIM_HOST=https://192.168.1.13 (gitignored, dev only)
 ├── CONTEXT.md                   # Long-term vision, principles
 └── STATE.md                     # This file
 ```
@@ -64,9 +69,10 @@ A single-page React app that controls a WiiM Mini on the local network. Running 
 
 | Decision | Why |
 |---|---|
-| Vite dev proxy instead of a Node backend | Wiim's self-signed cert blocks browser fetch. Proxy is one config block; a separate Express server would be more code to maintain. |
-| Device IP via `.env.local`, no UI | Simplest thing that works for one user on one network. Move to UI when actually needed. |
-| Hardcoded preset labels | The HTTP API can't read preset names — they live in the WiiM Home app. Hardcoding is honest. |
+| Vite dev proxy as the default | Wiim's self-signed cert blocks browser fetch. Proxy is one config block; a separate Express server would be more code to maintain. |
+| Custom host as an opt-in override | Empty input keeps the dev proxy active. Filling it bypasses the proxy and hits the device directly. Good enough until we deploy somewhere. |
+| Test-then-save for the host input | Protects against typos that would wedge the app. Reverts to the previous host on failure. |
+| Hardcoded preset labels in source | The HTTP API can't read preset names — they live in the WiiM Home app. Editing the array is the simplest workflow. |
 | Inline styles | One developer, small app. Migrating to Tailwind/CSS Modules later is mechanical and cheap. |
 | 2-second polling, no WebSocket | Device only exposes HTTP. 2s feels responsive enough for a remote. |
 | No tests yet | Almost no logic to test. `hexDecode` is the first candidate when the second utility appears. |
@@ -103,10 +109,9 @@ CI runs `npm run check` on every push to `main`. Smoke test only runs locally �
 
 ## Open issues / rough edges
 
-- **Volume slider has no debounce.** Dragging it sends a burst of HTTP requests. Hasn't caused problems yet but it's wasteful. Add debounce when it matters.
+- **Volume slider has no debounce.** Dragging it sends a burst of HTTP requests. Hasn't caused problems yet but it's wasteful.
 - **No error UI for transient failures.** A single failed poll silently does nothing. Acceptable for now; revisit if "is it stuck or just slow?" becomes a real question.
-- **Preset labels are placeholders** (`Preset 1`, `Preset 2`…). Should be edited to match what's actually in each slot.
-- **Hardcoded device IP.** If the Wiim's DHCP lease changes, the app breaks until `.env.local` is updated and the dev server is restarted.
+- **Custom host vs. dev proxy is mildly confusing.** Empty input = proxy, filled input = direct. Document this if anyone else uses it.
 
 ---
 
@@ -116,16 +121,15 @@ In rough priority order. Pick what's most useful, not what's listed first.
 
 ### Likely next
 
-- **Rename preset buttons** to match what's actually in each slot. 30-second change. Probably do this immediately.
-- **Device IP in the UI** — input field + `localStorage` persistence + a "test connection" button. Removes the `.env.local` dependency and makes the app shareable. Half a day.
-- **Volume debounce** — single `setTimeout` in the slider's onChange, 150ms. 5-minute fix.
+- **Volume debounce** — single `setTimeout` in the slider's onChange, ~150ms. 5-minute fix.
 - **Better error states** — show "Device unreachable" if 3 consecutive polls fail. Small but improves trust in the UI.
+- **Styling pass** — pick Tailwind or CSS Modules, do it in one go. The app is feature-complete enough to be worth polishing.
 
 ### Maybe later
 
-- **Styling pass** — pick Tailwind or CSS Modules, do it in one go. Worth doing once everything else is stable.
-- **Album art** — the API doesn't expose it directly, but there might be UPnP metadata we can pull. Investigate before committing.
-- **Seek bar** — `curpos` and `totlen` are already in `PlayerStatus`. Mostly useful for non-streaming sources where seek makes sense.
+- **Album art** — the API doesn't expose it directly, but UPnP metadata may. Investigate before committing.
+- **Seek bar** — `curpos` and `totlen` are already in `PlayerStatus`. Mostly useful for non-streaming sources.
+- **Keyboard shortcuts** — space for play/pause, arrows for volume/track. Nice on desktop.
 - **Multiple device support** — switch between several WiiMs. Only relevant once a second device exists.
 
 ### Probably not
