@@ -7,11 +7,8 @@ import {
   type PlayerStatus,
 } from './api/wiim'
 import PlayerView from './components/PlayerView'
-import DeviceSettings from './components/DeviceSettings'
-import { useDeviceHost } from './hooks/useDeviceHost'
 
 export default function App() {
-  const [host, setHost] = useDeviceHost()
   const [device, setDevice] = useState<DeviceInfo | null>(null)
   const [player, setPlayer] = useState<PlayerStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -26,7 +23,7 @@ export default function App() {
         setError(null)
       })
       .catch((e) => setError(String(e)))
-  }, [host])
+  }, [])
 
   useEffect(() => {
     const tick = async () => {
@@ -41,11 +38,11 @@ export default function App() {
     tick()
     const id = setInterval(tick, 2000)
     return () => clearInterval(id)
-  }, [host])
+  }, [])
 
   return (
     <main className="mx-auto max-w-md min-h-screen px-5 py-8 sm:px-6 sm:py-12">
-      <header className="mb-6">
+      <header className="mb-6 text-center">
         {device ? (
           <h1 className="text-3xl font-bold tracking-tight">
             {device.DeviceName}
@@ -64,7 +61,10 @@ export default function App() {
 
         {error && !device && (
           <p className="mt-2 text-sm text-danger">
-            Could not reach the device. Check the host below.
+            Could not reach the device. Check that your Wiim is on the network
+            and that <code className="font-mono">VITE_WIIM_HOST</code> in{' '}
+            <code className="font-mono">.env.local</code> matches its IP, then
+            restart the dev server.
           </p>
         )}
       </header>
@@ -83,10 +83,8 @@ export default function App() {
           }}
         />
       ) : (
-        <p className="text-muted">Waiting for device…</p>
+        <p className="text-center text-muted">Waiting for device…</p>
       )}
-
-      <DeviceSettings host={host} onHostChange={setHost} />
     </main>
   )
 }

@@ -1,44 +1,17 @@
-// In dev, requests go through the Vite proxy at /api/wiim.
-// In any other context (or when the user sets a custom host),
-// requests go directly to the device.
-let customHost: string | null = null
-
-export function setHost(host: string | null) {
-  customHost = host
-}
-
-// The actual fetch. hostOverride:
-//   - undefined → use the global customHost (normal usage)
-//   - null      → no host header (default proxy target)
-//   - string    → use that host (for testing)
-async function callApi(
-  cmd: string,
-  hostOverride?: string | null,
-): Promise<string> {
-  const host = hostOverride === undefined ? customHost : hostOverride
-
-  const headers: Record<string, string> = {}
-  if (host) {
-    headers['x-wiim-host'] = host
-  }
-
+async function command(cmd: string): Promise<string> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), 3000)
 
   try {
     const response = await fetch(
       `/api/wiim/httpapi.asp?command=${cmd}`,
-      { headers, signal: controller.signal },
+      { signal: controller.signal },
     )
     if (!response.ok) throw new Error(`Wiim error ${response.status}`)
     return await response.text()
   } finally {
     clearTimeout(timer)
   }
-}
-
-async function command(cmd: string): Promise<string> {
-  return callApi(cmd)
 }
 
 async function commandJson<T>(cmd: string): Promise<T> {
@@ -92,8 +65,6 @@ export const decodeTrack = (s: PlayerStatus) => ({
   album: hexDecode(s.Album),
 })
 
-// Triggers a preset (1-12) configured in the WiiM Home app.
-// Note: no setPlayerCmd: prefix — this is undocumented but works.
 export const playPreset = (slot: number) => command(`MCUKeyShortClick:${slot}`)
 
 export type Source = 'wifi' | 'line-in' | 'bluetooth'
@@ -101,9 +72,6 @@ export type Source = 'wifi' | 'line-in' | 'bluetooth'
 export const switchSource = (source: Source) =>
   command(`setPlayerCmd:switchmode:${source}`)
 
-// Mode codes observed on a WiiM Mini (Linkplay firmware).
-// 0 = idle, 10 = network streaming (Qobuz, Tidal, etc.),
-// 31 = Spotify Connect, 40 = line-in, 41 = bluetooth.
 export function readableMode(mode: string): string {
   switch (mode) {
     case '0':  return 'Idle'
@@ -113,11 +81,4 @@ export function readableMode(mode: string): string {
     case '41': return 'Bluetooth'
     default:   return `Mode ${mode}`
   }
-}
-
-// Test a specific host without affecting global state.
-// Used by the settings panel before committing a change.
-export async function testHost(host: string | null): Promise<DeviceInfo> {
-  const text = await callApi('getStatusEx', host)
-  return JSON.parse(text) as DeviceInfo
 }
