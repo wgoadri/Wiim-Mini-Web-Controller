@@ -3,34 +3,38 @@
 > Snapshot of where the project stands. Update this at the end of each working session.
 > For long-term vision and principles, see `CONTEXT.md`.
 
-**Last updated:** 2026-05-08
+**Last updated:** 2026-05-09
 
 ---
 
 ## What works today
 
-A single-page React app that controls a WiiM Mini on the local network. Running `npm run dev` opens a working remote at `http://localhost:5173`.
+A deployable web app that controls a WiiM Mini on the local network. Run `npm run serve` (or deploy the Express server) and open from any device on the network.
 
 ### Features
 
-- **Device status display** — name (centered), current source, playback status, current track (artist + title), with a pulsing dot indicator when playing
-- **Playback controls** — previous, play/pause, next. Real SVG icons. Play/pause icon swaps based on actual state. Pink/coral central play button as the visual anchor.
-- **Volume slider** — 0–100, debounced (150ms). Reads from local state during drag, snaps back to polled value after release.
-- **Preset buttons** — 6 buttons triggering preset slots 1–6 via `MCUKeyShortClick`. Labels match the user's actual WiiM Home presets. 2 columns on phone, 3 on desktop.
-- **Source switcher** — Network / Line-In / Bluetooth, with the active source highlighted (yellow background + ring).
-- **Status polling** — `getPlayerStatus` every 2 seconds with a 3-second per-request timeout to prevent pileup.
-- **Connection error indicator** — "Device unreachable" warning when 3+ consecutive polls fail. Friendly startup error pointing to `.env.local` if the device can't be reached on first load.
-- **Tailwind v4 styling** — playful warm cream + coral palette. Responsive on phone and desktop.
+- **Device status display** — name, current source, playback status, current track (artist + title + album), pulsing dot when playing
+- **Album art** via iTunes Search API, cached in memory, with a styled placeholder fallback
+- **Track progress bar** — animated bar + elapsed/total time, handles long tracks (`H:MM:SS`)
+- **Collapsible artist bio** — first paragraph from French Wikipedia, with a "Read more" link
+- **Playback controls** — previous, play/pause, next, with real SVG icons. Play/pause icon swaps based on actual state.
+- **Volume slider** — 0–100, debounced (150ms)
+- **Preset buttons** — 6 buttons triggering preset slots 1–6 via `MCUKeyShortClick`. Labels match the user's actual WiiM Home presets.
+- **Source switcher** — Network / Line-In / Bluetooth, with active-source highlighting
+- **Status polling** — every 2s with a 3s per-request timeout to prevent pileup
+- **Connection error indicator** — "Device unreachable" warning after 3 consecutive failures; friendly startup error with config guidance
+- **Production deployment** — Express server serves the built React app and proxies `/api/wiim/*` to the device. Single port, single process.
+- **Docker support** — multi-stage Dockerfile, `.dockerignore`, ready for NAS or home-server use
+- **Tailwind v4 styling** — playful warm cream + coral palette, responsive on phone and desktop
 
 ### Verified behaviors
 
+- App accessible from phone and other computers on the network via `http://<server-ip>:3000`
+- Album art and Wikipedia bio guards skip lookups for line-in and unknown metadata
+- HTML entity decoding via `<textarea>` handles encoded track strings cleanly
+- Hex-decoding of track metadata works for French titles with accents
 - Preset buttons trigger Qobuz playlists configured in the WiiM Home app
 - Spotify Connect playback is detected (mode `31` → "Spotify" label)
-- Hex-decoding of track metadata works for French titles with accents
-- Source switching works for all three inputs and the active-source highlight reflects reality
-- Volume drags don't flood the network — only the final value is sent
-- App keeps showing stale player data when polling fails, with a clear warning, instead of going blank
-- Connection errors point the user at the actual fix (`.env.local` + restart)
 
 ---
 
@@ -38,11 +42,11 @@ A single-page React app that controls a WiiM Mini on the local network. Running 
 
 ### Stack
 
-- **Vite + React + TypeScript**
-- **Tailwind v4** with `@tailwindcss/vite` plugin and a small `@theme` block for the palette
-- **No backend** — Vite dev proxy forwards `/api/wiim/*` to the device with `secure: false` to handle the self-signed cert
-- **No state library** — `useState` + `useEffect` only
-- **No tests** — there's no business logic worth testing yet
+- **Frontend** — Vite + React + TypeScript + Tailwind v4
+- **Production server** — Express + `http-proxy-middleware`, single file at `server/index.js`
+- **No state library** — `useState` + `useEffect` + small custom hooks
+- **No tests** — almost no logic to test; first candidates would be `hexDecode`, `formatTime`, the unknown-metadata helpers
+- **No backend (yet)** — the Express server is purely a static-file server + Wiim proxy. Qobuz Phase B will extend it.
 
 ### File layout
 
@@ -50,34 +54,45 @@ A single-page React app that controls a WiiM Mini on the local network. Running 
 /
 ├── src/
 │   ├── api/
-│   │   └── wiim.ts              # All device HTTP calls + types
+│   │   ├── wiim.ts              # Wiim HTTP calls + types + helpers
+│   │   ├── albumArt.ts          # iTunes Search API lookup, cached
+│   │   └── artistInfo.ts        # French Wikipedia summary lookup, cached
 │   ├── components/
-│   │   ├── PlayerView.tsx       # Now-playing card, controls, volume — receives PlayerStatus
+│   │   ├── PlayerView.tsx       # Now-playing card + controls + volume
 │   │   ├── PresetButtons.tsx    # 6 preset buttons
-│   │   └── SourceSwitcher.tsx   # Network/Line-In/Bluetooth toggle
-│   ├── App.tsx                  # Polls status, renders header, composes views
-│   ├── main.tsx                 # Vite entry
+│   │   ├── SourceSwitcher.tsx   # Network/Line-In/Bluetooth toggle
+│   │   └── TrackProgress.tsx    # Progress bar + time display
+│   ├── hooks/
+│   │   ├── useAlbumArt.ts
+│   │   └── useArtistInfo.ts
+│   ├── App.tsx
+│   ├── main.tsx
 │   └── index.css                # Tailwind import + theme tokens
+├── server/
+│   └── index.js                 # Express server: static + Wiim proxy
 ├── scripts/
-│   └── smoke.sh                 # Read-only device reachability check
+│   └── smoke.sh                 # Read-only Wiim reachability check
 ├── .github/workflows/
 │   └── ci.yml                   # typecheck + lint + build on push
-├── vite.config.ts               # Dev proxy with secure: false
-├── .env.local                   # VITE_WIIM_HOST=https://192.168.1.13 (gitignored)
-├── CONTEXT.md                   # Long-term vision, principles
-└── STATE.md                     # This file
+├── Dockerfile
+├── .dockerignore
+├── vite.config.ts
+├── .env.local                   # VITE_WIIM_HOST=https://192.168.1.13 (gitignored, dev only)
+├── CONTEXT.md
+├── STATE.md
+└── DEPLOY.md
 ```
 
 ### Key technical decisions
 
 | Decision | Why |
 |---|---|
-| Vite dev proxy is the only path to the device | Wiim's self-signed cert blocks browser fetch. Proxy with `secure: false` handles it. |
-| `.env.local` is the single source of truth for the host | One developer, one device. The custom-host UI was removed after multiple bugs and proved to be a speculative feature. To change the IP: edit one line, restart the dev server. |
-| Hardcoded preset labels in source | The HTTP API can't read preset names — they live in the WiiM Home app. Editing the array is the simplest workflow. |
-| Tailwind v4 | A coherent palette + responsive breakpoints across components without per-component duplication. The `@theme` block keeps tokens in one place. |
-| 2-second polling, 3-second fetch timeout | Device only exposes HTTP. Timeout prevents request pileup if anything stalls. |
-| No tests yet | Almost no logic to test. `hexDecode` is the first candidate when the second utility appears. |
+| Vite dev proxy in dev, Express in production | Both ignore the Wiim's self-signed cert (`secure: false`). Same shape, different host. The frontend code is identical. |
+| `WIIM_HOST` (production) / `VITE_WIIM_HOST` (dev) | Single source of truth for the device URL, set per environment. No UI for it. |
+| Server in plain JS with ES modules | One file, no build step, no extra TS toolchain for the server. The frontend stays in TypeScript. |
+| `<details>` for the artist bio toggle | Native HTML element, no toggle state to manage, accessible by default. |
+| In-memory cache (24h TTL) for iTunes + Wikipedia | Page reload re-fetches; that's fine. Avoids localStorage drift. |
+| The `state.x === x` pattern in hooks | Avoids `setState`-in-effect lint errors. State stores both the input and the result; the visible value is derived. |
 
 ---
 
@@ -87,59 +102,60 @@ Discovered empirically on the WiiM Mini. Used in `readableMode()` and `SourceSwi
 
 | Code | Meaning |
 |---|---|
-| `0`  | Idle (nothing selected) |
+| `0`  | Idle |
 | `10` | Network streaming (Qobuz, Tidal, generic) |
 | `31` | Spotify Connect |
 | `40` | Line-In |
 | `41` | Bluetooth |
-
-If a new mode shows up as `Mode XX`, log it and add it to the mapping.
 
 ---
 
 ## How to work on it
 
 ```bash
-npm run dev        # Start dev server
-npm run check      # typecheck + lint + build (run before committing)
-npm run smoke      # Hit the real Wiim with read-only commands
+npm run dev          # Vite dev server with hot reload
+npm run check        # typecheck + lint + build
+npm run smoke        # Hit the real Wiim with read-only commands
+npm run serve        # Build + start production server
+npm start            # Start production server (assumes dist/ exists)
 ```
 
-CI runs `npm run check` on every push to `main`. Smoke test only runs locally — the GitHub runner can't reach your Wiim.
+**Configuration**
+- Dev: `VITE_WIIM_HOST` in `.env.local`, restart `npm run dev` to pick it up.
+- Production: `WIIM_HOST` env var passed to the Express server.
 
-To change the device IP: edit `VITE_WIIM_HOST` in `.env.local` and restart the dev server. There is intentionally no UI for this.
+**Deployment**: see `DEPLOY.md` for Express direct, systemd, and Docker paths.
 
 ---
 
 ## Open issues / rough edges
 
-- **`Wiim error 502`** would surface generically if the proxy ever can't reach the device. The user-facing message is fine, but the underlying error string isn't pretty.
-- **Wiim Mini occasionally goes idle** between polls; the warning correctly fires, but a brief "reconnecting…" treatment instead of a static red message would feel calmer.
+- **`Wiim error 502`** would surface generically if the proxy ever can't reach the device. Friendly enough; the underlying error string isn't pretty.
+- **Artist bio is French Wikipedia only.** Some international artists have an English entry but no French one. We hide the section silently when nothing's found — no fallback yet.
 
 ---
 
 ## What's next
 
-Two phases agreed:
+### Phase B — Qobuz integration (active)
 
-### Phase A — Polish round (next)
+The user's Qobuz developer notes (`Gobuz_API`) shape the realistic scope here. Important constraint:
 
-Frontend-only, no architectural change. Goal: turn a functional remote into something that feels good to use.
+> "Use Qobuz mainly for: metadata, search, browsing, favorites, playlists.
+> Avoid: direct stream extraction, download APIs, undocumented playback endpoints."
 
-- **Album art** via iTunes Search API. Free, no auth, surprisingly good coverage from artist + album. The single biggest visual win.
-- **Track progress bar.** `curpos` and `totlen` are already in `PlayerStatus`. Read-only at first; consider seeking later.
-- **Track info panel (collapsible).** Optional dropdown under the now-playing card showing album, year, and a short artist/album description. Source TBD — possibly Wikipedia summaries, MusicBrainz, or Last.fm. Pick the simplest free option.
-- **Design refinement pass.** Now that album art changes the visual weight of the now-playing card, the surrounding layout (controls, presets, source) should be re-balanced. Possibly: bigger artwork, tighter control row, more breathing room.
+Search and metadata are stable. **Playback** is the hard part — turning a Qobuz track into something the Wiim plays requires either fragile stream-URL extraction or a UPnP/private-API path we haven't validated yet.
 
-### Phase B — Qobuz integration
+Phase 0 (discovery, no code) answers two questions:
 
-Real architecture change: introduces a backend. Plan as 3 sessions, not one.
+1. **Does Qobuz auth + search still work today** with a current `app_id`?
+2. **Can we bridge a Qobuz selection to Wiim playback** in a way we control?
 
-- **Phase 0 — Discovery.** Find a working `app_id`/`app_secret` pair. Validate the auth flow (user token via username + password hash) with `curl`. Confirm we can hit `track/getFileUrl` and get a playable stream URL. **No code in the project until this works.**
-- **Phase 1 — Backend skeleton.** Smallest possible Express server. Endpoints: `/qobuz/login`, `/qobuz/search`, `/qobuz/track-url/:id`. Secrets stay server-side. Process runs alongside the Vite dev server.
-- **Phase 2 — Frontend wiring.** Search UI, results list, "play this" button that calls our backend, gets a stream URL, and sends it to the Wiim via `setPlayerCmd:play:{url}`.
+If both yes → full Qobuz search-and-play feature.
+If (1) yes and (2) no → smaller "search and browse Qobuz from the app" feature with no direct playback (limited but still useful).
+If (1) no → stop. Don't build on broken foundations.
 
-Risks to flag now: Qobuz has no official public API; auth and endpoints can break without notice. The first session's job is to find out whether it currently works at all before committing.
+Phase 1 and beyond are deferred until Phase 0 produces clear answers.
 
 ---
 
@@ -149,25 +165,20 @@ Risks to flag now: Qobuz has no official public API; auth and endpoints can brea
 - **Mute toggle button.** The `mute` field is already there.
 - **Lyrics** via lyrics.ovh (free, mediocre catalog). Fun, low value.
 - **PWA / install prompt.** Add only if used daily on mobile.
+- **English Wikipedia fallback** for artist bios when French has no entry.
 - **Multi-device support.** Only relevant once a second WiiM exists.
 
 ---
 
 ## Probably not
 
-- **Spotify Web API integration.** Spotify Connect already does the job — open Spotify, pick the WiiM as the device, control from there. Building it into our app duplicates working functionality.
+- **Spotify Web API integration.** Spotify Connect already does the job.
 - **Web Bluetooth.** No concrete use case, unsupported on iOS Safari.
-- **Custom host UI** (already removed). Don't re-add unless we deploy this somewhere with multiple devices.
-- **Wikipedia / tabs / decorative integrations.** All considered and skipped.
+- **Custom host UI.** Removed; `.env.local` / `WIIM_HOST` cover the need.
+- **Wikipedia / tabs / decorative integrations.** Considered and skipped.
 
 ---
 
 ## Updating this file
 
-After each feature ships, update three sections:
-
-1. **What works today** — add the new behavior
-2. **Open issues** — note anything new that's rough but not blocking
-3. **What's next** — re-rank based on what changed
-
-Keep it under 300 lines. If it grows beyond that, something's wrong with the project, not the doc.
+After each feature ships, update three sections: **What works today**, **Open issues**, **What's next**. Keep it under 300 lines.
