@@ -7,10 +7,19 @@ export function setHost(host: string | null) {
   customHost = host
 }
 
-async function command(cmd: string): Promise<string> {
+// The actual fetch. hostOverride:
+//   - undefined → use the global customHost (normal usage)
+//   - null      → no host header (default proxy target)
+//   - string    → use that host (for testing)
+async function callApi(
+  cmd: string,
+  hostOverride?: string | null,
+): Promise<string> {
+  const host = hostOverride === undefined ? customHost : hostOverride
+
   const headers: Record<string, string> = {}
-  if (customHost) {
-    headers['x-wiim-host'] = customHost
+  if (host) {
+    headers['x-wiim-host'] = host
   }
 
   const controller = new AbortController()
@@ -26,6 +35,10 @@ async function command(cmd: string): Promise<string> {
   } finally {
     clearTimeout(timer)
   }
+}
+
+async function command(cmd: string): Promise<string> {
+  return callApi(cmd)
 }
 
 async function commandJson<T>(cmd: string): Promise<T> {
@@ -100,4 +113,11 @@ export function readableMode(mode: string): string {
     case '41': return 'Bluetooth'
     default:   return `Mode ${mode}`
   }
+}
+
+// Test a specific host without affecting global state.
+// Used by the settings panel before committing a change.
+export async function testHost(host: string | null): Promise<DeviceInfo> {
+  const text = await callApi('getStatusEx', host)
+  return JSON.parse(text) as DeviceInfo
 }

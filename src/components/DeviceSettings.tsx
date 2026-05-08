@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { getDeviceInfo } from '../api/wiim'
+import { testHost } from '../api/wiim'
 
 interface Props {
   host: string
@@ -36,17 +36,17 @@ export default function DeviceSettings({ host, onHostChange }: Props) {
     }
 
     setTestState('testing')
-    const previous = host
-    onHostChange(draft)
+    setErrorMessage('')
 
     try {
-      await getDeviceInfo()
+      // Test against the draft host directly — does NOT touch global state.
+      await testHost(draft || null)
+      // Only commit on success. No revert logic needed.
+      onHostChange(draft)
       setTestState('success')
-      setErrorMessage('')
     } catch {
       setTestState('failure')
       setErrorMessage('Could not reach device.')
-      onHostChange(previous)
     }
   }
 
