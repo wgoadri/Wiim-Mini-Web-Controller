@@ -43,9 +43,6 @@ export default function App() {
     return () => clearInterval(id)
   }, [host])
 
-  if (error) return <pre>Error: {error}</pre>
-  if (!device || !player) return <p>Loading…</p>
-
   return (
     <main style={{ fontFamily: 'system-ui', padding: 24, maxWidth: 480 }}>
       {device ? (
