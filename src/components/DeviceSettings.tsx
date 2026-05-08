@@ -8,7 +8,6 @@ interface Props {
 
 type TestState = 'idle' | 'testing' | 'success' | 'failure'
 
-// Returns null if valid, otherwise an error message.
 function validateHost(input: string): string | null {
   if (!/^https?:\/\//.test(input)) {
     return 'Host must start with http:// or https://'
@@ -27,7 +26,6 @@ export default function DeviceSettings({ host, onHostChange }: Props) {
   const [errorMessage, setErrorMessage] = useState('')
 
   async function testAndSave() {
-    // Empty input is allowed — it falls back to the dev proxy.
     if (draft) {
       const validationError = validateHost(draft)
       if (validationError) {
@@ -38,7 +36,6 @@ export default function DeviceSettings({ host, onHostChange }: Props) {
     }
 
     setTestState('testing')
-
     const previous = host
     onHostChange(draft)
 
@@ -54,12 +51,12 @@ export default function DeviceSettings({ host, onHostChange }: Props) {
   }
 
   return (
-    <details style={{ margin: '24px 0' }}>
-      <summary style={{ cursor: 'pointer', fontSize: 14 }}>
+    <details className="mt-8 rounded-xl bg-surface p-4 shadow-sm">
+      <summary className="cursor-pointer text-sm font-medium text-muted">
         Device settings
       </summary>
-      <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <label style={{ fontSize: 13 }}>
+      <div className="mt-3 flex flex-col gap-2">
+        <label className="text-xs uppercase tracking-wider text-muted">
           Wiim host (leave empty to use dev proxy)
         </label>
         <input
@@ -67,16 +64,20 @@ export default function DeviceSettings({ host, onHostChange }: Props) {
           value={draft}
           placeholder="https://192.168.1.13"
           onChange={(e) => setDraft(e.target.value)}
-          style={{ padding: 8, fontFamily: 'monospace' }}
+          className="rounded-lg border border-muted/30 bg-bg px-3 py-2 font-mono text-sm focus:border-accent focus:outline-none"
         />
-        <button onClick={testAndSave} disabled={testState === 'testing'}>
+        <button
+          onClick={testAndSave}
+          disabled={testState === 'testing'}
+          className="rounded-lg bg-ink px-4 py-2 text-sm font-medium text-white transition active:scale-95 disabled:opacity-50"
+        >
           {testState === 'testing' ? 'Testing…' : 'Test & save'}
         </button>
         {testState === 'success' && (
-          <p style={{ color: 'green', margin: 0 }}>Connected.</p>
+          <p className="text-sm text-emerald-700">Connected.</p>
         )}
         {testState === 'failure' && (
-          <p style={{ color: 'crimson', margin: 0 }}>{errorMessage}</p>
+          <p className="text-sm text-danger">{errorMessage}</p>
         )}
       </div>
     </details>

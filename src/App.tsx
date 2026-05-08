@@ -20,14 +20,14 @@ export default function App() {
   const [pollFailures, setPollFailures] = useState(0)
 
   useEffect(() => {
-      getDeviceInfo()
-        .then((info) => {
-          setDevice(info)
-          setError(null)
-        })
-        .catch((e) => setError(String(e)))
+    getDeviceInfo()
+      .then((info) => {
+        setDevice(info)
+        setError(null)
+      })
+      .catch((e) => setError(String(e)))
   }, [host])
-    
+
   useEffect(() => {
     const tick = async () => {
       try {
@@ -44,24 +44,30 @@ export default function App() {
   }, [host])
 
   return (
-    <main style={{ fontFamily: 'system-ui', padding: 24, maxWidth: 480 }}>
-      {device ? (
-        <h1>{device.DeviceName}</h1>
-      ) : (
-        <h1 style={{ color: '#888' }}>Wiim Controller</h1>
-      )}
+    <main className="mx-auto max-w-md min-h-screen px-5 py-8 sm:px-6 sm:py-12">
+      <header className="mb-6">
+        {device ? (
+          <h1 className="text-3xl font-bold tracking-tight">
+            {device.DeviceName}
+          </h1>
+        ) : (
+          <h1 className="text-3xl font-bold tracking-tight text-muted">
+            Wiim Controller
+          </h1>
+        )}
 
-      {pollFailures >= 3 && (
-        <p style={{ color: 'crimson', fontSize: 13, margin: '8px 0' }}>
-          Device unreachable. Last update may be stale.
-        </p>
-      )}
+        {pollFailures >= 3 && (
+          <p className="mt-2 text-sm text-danger">
+            Device unreachable. Last update may be stale.
+          </p>
+        )}
 
-      {error && !device && (
-        <p style={{ color: 'crimson', fontSize: 13, margin: '8px 0' }}>
-          Could not reach the device. Check the host below.
-        </p>
-      )}
+        {error && !device && (
+          <p className="mt-2 text-sm text-danger">
+            Could not reach the device. Check the host below.
+          </p>
+        )}
+      </header>
 
       {device && player ? (
         <PlayerView
@@ -77,7 +83,7 @@ export default function App() {
           }}
         />
       ) : (
-        <p style={{ color: '#888' }}>Waiting for device…</p>
+        <p className="text-muted">Waiting for device…</p>
       )}
 
       <DeviceSettings host={host} onHostChange={setHost} />

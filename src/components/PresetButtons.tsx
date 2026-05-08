@@ -6,7 +6,6 @@ interface Preset {
 }
 
 // Edit this list to match what you configured in the WiiM Home app.
-// Slots not configured on the device will simply do nothing when pressed.
 const PRESETS: Preset[] = [
   { slot: 1, label: 'Spotify' },
   { slot: 2, label: 'France Inter' },
@@ -18,20 +17,16 @@ const PRESETS: Preset[] = [
 
 export default function PresetButtons() {
   return (
-    <section style={{ margin: '24px 0' }}>
-      <h2 style={{ fontSize: 16, marginBottom: 8 }}>Presets</h2>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 8,
-        }}
-      >
+    <section className="mb-6">
+      <h2 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
+        Presets
+      </h2>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {PRESETS.map((preset) => (
           <button
             key={preset.slot}
             onClick={() => playPreset(preset.slot)}
-            style={{ padding: '12px 8px' }}
+            className="rounded-xl bg-surface px-3 py-4 text-sm font-medium shadow-sm transition active:scale-95 hover:bg-active"
           >
             {preset.label}
           </button>
