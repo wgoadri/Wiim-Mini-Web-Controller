@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import type { IncomingMessage } from 'http'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
@@ -15,9 +16,7 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false,
           rewrite: (path) => path.replace(/^\/api\/wiim/, ''),
-          // Per-request override: the frontend can set X-Wiim-Host
-          // to point at a different device without changing config.
-          router: (req) => {
+          router: (req: IncomingMessage) => {
             const host = req.headers['x-wiim-host']
             return typeof host === 'string' ? host : undefined
           },
