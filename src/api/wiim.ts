@@ -1,11 +1,12 @@
 async function command(cmd: string): Promise<string> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), 3000)
+  const headers = new Headers({ 'X-Requested-With': 'WiimClient' })
 
   try {
     const response = await fetch(
-      `/api/wiim/httpapi.asp?command=${cmd}`,
-      { signal: controller.signal },
+      `/api/wiim/httpapi.asp?command=${encodeURIComponent(cmd)}`,
+      { headers, signal: controller.signal },
     )
     if (!response.ok) throw new Error(`Wiim error ${response.status}`)
     return await response.text()
@@ -99,3 +100,5 @@ export function readableMode(mode: string): string {
     default:   return `Mode ${mode}`
   }
 }
+
+export const playUrl = (url: string) => command(`setPlayerCmd:play:${url}`)

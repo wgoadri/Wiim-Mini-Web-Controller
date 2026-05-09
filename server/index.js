@@ -2,7 +2,7 @@ import express from 'express'
 import { createProxyMiddleware } from 'http-proxy-middleware'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { getQobuzConfig, search as qobuzSearch } from './qobuz.js'
+import { getQobuzConfig, search as qobuzSearch, getTrackUrl } from './qobuz.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -46,6 +46,29 @@ if (qobuzConfig) {
     try {
       const result = await qobuzSearch(query, qobuzConfig)
       res.json(result)
+    } catch (error) {
+      res.status(502).json({ error: error.message })
+    }
+  })
+
+  app.get('/api/qobuz/track/:id/url', async (req, res) => {
+    const trackId = req.params.id
+    const formatId = Number(req.query.format_id) || 5
+
+    try {
+      const result = await getTrackUrl(trackId, qobuzConfig, formatId)
+      if (!result.url) {
+        return res.status(404).json({
+          error: 'No stream URL returned',
+          details: result,
+        })
+      }
+      res.json({
+        url: result.url,
+        duration: result.duration,
+        format_id: result.format_id,
+        mime_type: result.mime_type,
+      })
     } catch (error) {
       res.status(502).json({ error: error.message })
     }
