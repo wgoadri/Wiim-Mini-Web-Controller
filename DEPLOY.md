@@ -13,6 +13,51 @@ Two environment variables, both optional:
   different IP.
 - `PORT` — port the server listens on. Defaults to `3000`.
 
+## Qobuz integration (optional)
+
+Three additional environment variables enable Qobuz search and (later)
+playback. If any are missing, the app runs normally without Qobuz
+features.
+
+- `QOBUZ_APP_ID` — application identifier the Qobuz web player uses.
+- `QOBUZ_APP_SECRET` — paired secret, required for stream URL signing
+  (used in a later phase, not yet by search).
+- `QOBUZ_USER_AUTH_TOKEN` — your personal session token.
+
+### How to get them
+
+**App ID and App Secret.** The Qobuz web player has them embedded.
+The simplest way: open `https://play.qobuz.com` in Chrome, log in,
+open DevTools → Network → click any request to `*.qobuz.com`. The
+`x-app-id` request header is your app_id. The app_secret is harder —
+it's obscured in the JS bundle; either extract it manually following
+a project like `qobuz-dl` (look at how their `bundle.js` parser
+works), or borrow from a recent commit of an active downloader project.
+Both values rotate occasionally; if Qobuz endpoints start failing
+mysteriously, the rotation is usually why.
+
+**User Auth Token.** Qobuz now uses an OAuth-style flow that's hard
+to script directly. Easiest path: log in at `https://play.qobuz.com`,
+open DevTools → Application → Local Storage → look for an entry
+containing `user_auth_token` or `userAuthToken`. Copy the value.
+Alternatively, look at any authenticated request's `x-user-auth-token`
+request header. Tokens last for months but eventually expire — when
+search starts returning 401s, repeat this step.
+
+### Setting the variables
+
+Add to your environment (or `docker run -e`, or systemd `Environment=`):
+
+```
+  QOBUZ_APP_ID=798273057
+  QOBUZ_APP_SECRET=...
+  QOBUZ_USER_AUTH_TOKEN=...
+```
+
+For local dev, you can also create a `.env` file in the repo root and
+load it with a small change to `server/index.js` if needed — but env
+vars passed directly to `npm start` work without any extra setup.
+
 ## Quick start (without Docker)
 
 On any machine with Node 20+ that can reach the Wiim:
