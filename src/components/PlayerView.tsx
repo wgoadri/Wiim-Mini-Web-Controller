@@ -11,6 +11,8 @@ import { useArtistInfo } from '../hooks/useArtistInfo'
 import SourceSwitcher from './SourceSwitcher'
 import PresetButtons from './PresetButtons'
 import TrackProgress from './TrackProgress'
+import type { QobuzTrack } from '../api/qobuz'
+
 
 function decodeText(value: string): string {
   if (!value) return ''
@@ -96,6 +98,7 @@ interface NowPlayingProps {
   artist: string
   title: string
   album: string
+  qobuzActive: QobuzTrack | null
   status: string
   mode: string
   isPlaying: boolean
@@ -107,26 +110,37 @@ function NowPlaying({
   artist,
   title,
   album,
+  qobuzActive,
   status,
   mode,
   isPlaying,
   curpos,
-  totlen
+  totlen,
 }: NowPlayingProps) {
-  const decodedArtist = decodeText(artist)
-  const decodedAlbum = decodeText(album)
-  const decodedTitle = decodeText(title)
+// Decode whatever the Wiim reported (hex + HTML entities sometimes leak through)
+  const wiimTitle = decodeText(title)
+  const wiimArtist = decodeText(artist)
+  const wiimAlbum = decodeText(album)
 
-  const canLoadArt = shouldLoadAlbumArt(
-    decodedArtist,
-    decodedAlbum,
-    mode,
-  )
+  // When we initiated Qobuz playback, the Wiim has no metadata — title comes
+  // back as the stream URL. Use our stored Qobuz info instead.
+  const titleLooksLikeUrl =
+    wiimTitle.startsWith('http://') || wiimTitle.startsWith('https://')
+  const useQobuz = qobuzActive !== null && titleLooksLikeUrl
 
-  const artUrl = useAlbumArt(
-    canLoadArt ? decodedArtist : '',
-    canLoadArt ? decodedAlbum : '',
+  const decodedTitle = useQobuz ? qobuzActive.title : wiimTitle
+  const decodedArtist = useQobuz ? qobuzActive.artist : wiimArtist
+  const decodedAlbum = useQobuz ? qobuzActive.album : wiimAlbum
+  const albumImageOverride = useQobuz ? qobuzActive.albumImage : null
+
+  const canLoadArt = shouldLoadAlbumArt(decodedArtist, decodedAlbum, mode)
+
+  // Skip iTunes lookup if we already have Qobuz cover art
+  const fetchedArt = useAlbumArt(
+    canLoadArt && !albumImageOverride ? decodedArtist : '',
+    canLoadArt && !albumImageOverride ? decodedAlbum : '',
   )
+  const artUrl = albumImageOverride ?? fetchedArt
 
   const artistInfo = useArtistInfo(canLoadArt ? decodedArtist : '')
 
@@ -205,12 +219,14 @@ function NowPlaying({
 
 interface Props {
   player: PlayerStatus
+  qobuzActive: QobuzTrack | null
   localVolume: number | null
   onVolumeChange: (next: number) => void
 }
 
 export default function PlayerView({
   player,
+  qobuzActive,
   localVolume,
   onVolumeChange,
 }: Props) {
@@ -226,6 +242,7 @@ export default function PlayerView({
         artist={track.artist}
         title={track.title}
         album={track.album}
+        qobuzActive={qobuzActive} 
         status={player.status}
         mode={player.mode}
         isPlaying={isPlaying}

@@ -6,9 +6,15 @@ import {
   type DeviceInfo,
   type PlayerStatus,
 } from './api/wiim'
+import type { QobuzTrack } from './api/qobuz'
 import PlayerView from './components/PlayerView'
+import SearchView from './components/SearchView'
+import Tabs, { type View } from './components/Tabs'
 
 export default function App() {
+  const [view, setView] = useState<View>('player')
+  const [qobuzActive, setQobuzActive] = useState<QobuzTrack | null>(null)
+
   const [device, setDevice] = useState<DeviceInfo | null>(null)
   const [player, setPlayer] = useState<PlayerStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -69,22 +75,28 @@ export default function App() {
         )}
       </header>
 
-      {device && player ? (
-        <PlayerView
-          player={player}
-          localVolume={localVolume}
-          onVolumeChange={(next) => {
-            setLocalVolume(next)
-            if (volumeTimer.current) clearTimeout(volumeTimer.current)
-            volumeTimer.current = window.setTimeout(() => {
-              setVolume(next)
-              setLocalVolume(null)
-            }, 150)
-          }}
-        />
-      ) : (
-        <p className="text-center text-muted">Waiting for device…</p>
-      )}
+      <Tabs current={view} onChange={setView} />
+
+      {view === 'player' &&
+        (device && player ? (
+          <PlayerView
+            player={player}
+            qobuzActive={qobuzActive}
+            localVolume={localVolume}
+            onVolumeChange={(next) => {
+              setLocalVolume(next)
+              if (volumeTimer.current) clearTimeout(volumeTimer.current)
+              volumeTimer.current = window.setTimeout(() => {
+                setVolume(next)
+                setLocalVolume(null)
+              }, 150)
+            }}
+          />
+        ) : (
+          <p className="text-center text-muted">Waiting for device…</p>
+        ))}
+
+      {view === 'search' && <SearchView onPlayingTrack={setQobuzActive} />}
     </main>
   )
 }

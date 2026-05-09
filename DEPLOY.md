@@ -26,16 +26,6 @@ features.
 
 ### How to get them
 
-**App ID and App Secret.** The Qobuz web player has them embedded.
-The simplest way: open `https://play.qobuz.com` in Chrome, log in,
-open DevTools → Network → click any request to `*.qobuz.com`. The
-`x-app-id` request header is your app_id. The app_secret is harder —
-it's obscured in the JS bundle; either extract it manually following
-a project like `qobuz-dl` (look at how their `bundle.js` parser
-works), or borrow from a recent commit of an active downloader project.
-Both values rotate occasionally; if Qobuz endpoints start failing
-mysteriously, the rotation is usually why.
-
 **User Auth Token.** Qobuz now uses an OAuth-style flow that's hard
 to script directly. Easiest path: log in at `https://play.qobuz.com`,
 open DevTools → Application → Local Storage → look for an entry
@@ -43,6 +33,20 @@ containing `user_auth_token` or `userAuthToken`. Copy the value.
 Alternatively, look at any authenticated request's `x-user-auth-token`
 request header. Tokens last for months but eventually expire — when
 search starts returning 401s, repeat this step.
+
+
+**App ID and App Secret.** The repository includes a helper script
+that extracts both using qobuz-dl's bundle parser:
+
+```
+  pip install qobuz-dl requests
+  export QOBUZ_USER_AUTH_TOKEN="your-token"  # see below
+  python scripts/extract_qobuz_secret.py
+```
+
+It prints a working `QOBUZ_APP_ID` and `QOBUZ_APP_SECRET` to copy into
+your environment. Re-run it when stream URLs start failing — the
+secret rotates every few months.
 
 ### Setting the variables
 
