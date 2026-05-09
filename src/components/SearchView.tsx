@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { search, getStreamUrl, type QobuzTrack } from '../api/qobuz'
-import { playUrl } from '../api/wiim'
+import { search, play, type QobuzTrack } from '../api/qobuz'
 
 interface Props {
-  onPlayingTrack: (track: QobuzTrack) => void
+  onPlay: () => void
 }
 
-export default function SearchView({ onPlayingTrack }: Props) {
+export default function SearchView({ onPlay }: Props) {
   const [query, setQuery] = useState('')
   const [tracks, setTracks] = useState<QobuzTrack[] | null>(null)
   const [searching, setSearching] = useState(false)
@@ -36,15 +35,12 @@ export default function SearchView({ onPlayingTrack }: Props) {
     }
   }
 
-  async function handlePlay(track: QobuzTrack) {
+async function handlePlay(track: QobuzTrack) {
     setPlayingId(track.id)
     setError(null)
     try {
-      const url = await getStreamUrl(track.id)
-      // Tell App about the playing track BEFORE the play command, so the
-      // Player view has metadata ready by the time polling catches up.
-      onPlayingTrack(track)
-      await playUrl(url)
+      await play(track)
+      onPlay()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Playback failed')
     } finally {

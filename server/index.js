@@ -11,6 +11,8 @@ const WIIM_HOST = process.env.WIIM_HOST || 'https://192.168.1.13'
 
 const app = express()
 
+app.use(express.json())
+
 // Forward Wiim API calls. secure:false handles the self-signed cert,
 // same as Vite's dev proxy.
 app.use(
@@ -51,27 +53,42 @@ if (qobuzConfig) {
     }
   })
 
-  app.get('/api/qobuz/track/:id/url', async (req, res) => {
-    const trackId = req.params.id
+  let qobuzNowPlaying = null
+
+  app.post('/api/qobuz/play', async (req, res) => {
+    const { trackId, title, artist, album, albumImage } = req.body
+    if (!trackId) {
+      return res.status(400).json({ error: 'trackId is required' })
+    }
+
     const formatId = Number(req.query.format_id) || 5
 
     try {
       const result = await getTrackUrl(trackId, qobuzConfig, formatId)
       if (!result.url) {
-        return res.status(404).json({
-          error: 'No stream URL returned',
-          details: result,
-        })
+        return res.status(404).json({ error: 'No stream URL returned', details: result })
       }
+
+      qobuzNowPlaying = {
+        trackId,
+        title: title ?? '',
+        artist: artist ?? '',
+        album: album ?? '',
+        albumImage: albumImage ?? '',
+      }
+
       res.json({
         url: result.url,
         duration: result.duration,
         format_id: result.format_id,
-        mime_type: result.mime_type,
       })
     } catch (error) {
       res.status(502).json({ error: error.message })
     }
+  })
+
+  app.get('/api/qobuz/now-playing', (_req, res) => {
+    res.json({ track: qobuzNowPlaying })
   })
 } else {
   console.log('Qobuz integration disabled (QOBUZ_APP_ID and QOBUZ_USER_AUTH_TOKEN not set)')

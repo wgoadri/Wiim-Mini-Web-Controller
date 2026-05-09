@@ -49,11 +49,40 @@ export async function search(query: string): Promise<QobuzSearchResults> {
   return { tracks }
 }
 
-export async function getStreamUrl(trackId: number): Promise<string> {
-  const response = await fetch(`/api/qobuz/track/${trackId}/url`)
+import { playUrl } from './wiim'
+
+export interface QobuzNowPlaying {
+  trackId: number
+  title: string
+  artist: string
+  album: string
+  albumImage: string
+}
+
+export async function play(track: QobuzTrack): Promise<void> {
+  const response = await fetch('/api/qobuz/play', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      trackId: track.id,
+      title: track.title,
+      artist: track.artist,
+      album: track.album,
+      albumImage: track.albumImage,
+    }),
+  })
+
   if (!response.ok) {
-    throw new Error(`Stream URL resolution failed (${response.status})`)
+    throw new Error(`Play failed (${response.status})`)
   }
+
+  const { url } = await response.json()
+  await playUrl(url)
+}
+
+export async function getNowPlaying(): Promise<QobuzNowPlaying | null> {
+  const response = await fetch('/api/qobuz/now-playing')
+  if (!response.ok) return null
   const data = await response.json()
-  return data.url
+  return data.track ?? null
 }

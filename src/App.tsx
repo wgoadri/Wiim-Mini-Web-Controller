@@ -6,14 +6,41 @@ import {
   type DeviceInfo,
   type PlayerStatus,
 } from './api/wiim'
-import type { QobuzTrack } from './api/qobuz'
 import PlayerView from './components/PlayerView'
 import SearchView from './components/SearchView'
 import Tabs, { type View } from './components/Tabs'
+import { getNowPlaying, type QobuzNowPlaying } from './api/qobuz'
+
 
 export default function App() {
   const [view, setView] = useState<View>('player')
-  const [qobuzActive, setQobuzActive] = useState<QobuzTrack | null>(null)
+
+  const [qobuzActive, setQobuzActive] = useState<QobuzNowPlaying | null>(null)
+
+  const triggerQobuzRefresh = useRef<() => void>(() => {})
+
+  useEffect(() => {
+    let cancelled = false
+
+    const tick = () => {
+      getNowPlaying()
+        .then((track) => {
+          if (!cancelled) setQobuzActive(track)
+        })
+        .catch(() => {
+          // transient — next poll will retry
+        })
+    }
+
+    triggerQobuzRefresh.current = tick
+    tick()
+    const id = setInterval(tick, 2000)
+
+    return () => {
+      cancelled = true
+      clearInterval(id)
+    }
+  }, [])
 
   const [device, setDevice] = useState<DeviceInfo | null>(null)
   const [player, setPlayer] = useState<PlayerStatus | null>(null)
@@ -96,7 +123,9 @@ export default function App() {
           <p className="text-center text-muted">Waiting for device…</p>
         ))}
 
-      {view === 'search' && <SearchView onPlayingTrack={setQobuzActive} />}
+      {view === 'search' && (
+        <SearchView onPlay={() => triggerQobuzRefresh.current()} />
+      )}
     </main>
   )
 }

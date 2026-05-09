@@ -11,7 +11,7 @@ import { useArtistInfo } from '../hooks/useArtistInfo'
 import SourceSwitcher from './SourceSwitcher'
 import PresetButtons from './PresetButtons'
 import TrackProgress from './TrackProgress'
-import type { QobuzTrack } from '../api/qobuz'
+import type { QobuzNowPlaying } from '../api/qobuz'
 
 
 function decodeText(value: string): string {
@@ -98,7 +98,7 @@ interface NowPlayingProps {
   artist: string
   title: string
   album: string
-  qobuzActive: QobuzTrack | null
+  qobuzActive: QobuzNowPlaying | null
   status: string
   mode: string
   isPlaying: boolean
@@ -219,7 +219,7 @@ function NowPlaying({
 
 interface Props {
   player: PlayerStatus
-  qobuzActive: QobuzTrack | null
+  qobuzActive: QobuzNowPlaying | null
   localVolume: number | null
   onVolumeChange: (next: number) => void
 }
